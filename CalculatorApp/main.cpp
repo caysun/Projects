@@ -426,7 +426,8 @@ int main()
                 // Check for SHIFT + '=' → '+' key
                 if ((sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || 
                     sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) && 
-                    event.key.code == sf::Keyboard::Equal && (!isOperator(text.getString()[text.getString().getSize()-1]))) {
+                    event.key.code == sf::Keyboard::Equal && text.getString().getSize()>0 
+                    && (!isOperator(text.getString()[text.getString().getSize()-1]))) {
                     text.setString(text.getString() + symbols[15].getString());  // '+'
                 }
                 // Check for '-'
@@ -436,11 +437,13 @@ int main()
                 // Check for SHIFT + '8' → '*'
                 else if ((sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || 
                         sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) && 
-                        event.key.code == sf::Keyboard::Num8 && !isOperator(text.getString()[text.getString().getSize()-1])) {
+                        event.key.code == sf::Keyboard::Num8 && !isOperator(text.getString()[text.getString().getSize()-1])
+                        && text.getString().getSize()>0) {
                     text.setString(text.getString() + symbols[7].getString());   // '*'
                 }
                 // Check for '/'
-                else if (event.key.code == sf::Keyboard::Slash && !isOperator(text.getString()[text.getString().getSize()-1])) {
+                else if (event.key.code == sf::Keyboard::Slash && !isOperator(text.getString()[text.getString().getSize()-1])
+                    && text.getString().getSize()>0) {
                     text.setString(text.getString() + symbols[3].getString());   // '/'
                 }
                 // Check for '.'
@@ -455,14 +458,20 @@ int main()
                 sf::Text curText;
                 for(auto &button : buttons){
                     if(button.getFillColor() == sf::Color(175, 175, 175) && rectToText[&button].getString() != L"="){
+                        if(text.getString().getSize() > 15) break;
                         curText = rectToText[&button];
+                        if(isOperator(curText.getString()[0]) && curText.getString()[0] != L'-' && text.getString().getSize()==0) break;
+                        if(curText.getString()[0] != L'-' && isOperator(curText.getString()[0]) && 
+                            (isOperator(text.getString()[text.getString().getSize()-1]))) break;
+                        else if(curText.getString()[0] == L'-' && text.getString()[text.getString().getSize()-1] == L'-') break;
                         if(curText.getString() == L".") decimalCt++;
-                        if(curText.getString() == L"." && decimalCt > 1) break;
+                        if(!validDecimal(text.getString() + curText.getString())) break;
                         text.setString(text.getString() + curText.getString());
                         break;
                     }
                     else if(button.getFillColor() == sf::Color(175, 175, 175) && rectToText[&button].getString() == L"="
-                        && (validDecimal(text.getString()+symbols[13].getString()))){
+                        && (validDecimal(text.getString()+symbols[13].getString()))
+                        && !isOperator(text.getString()[text.getString().getSize()-1])){
                         decimalCt = 0;
                         try{
                             std::wstring realInput = (addParentheses(text.getString().toWideString()));
