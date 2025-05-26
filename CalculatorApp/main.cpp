@@ -191,6 +191,27 @@ std::wstring addParentheses(const std::wstring& expr) {
             }
         }
 
+        if(c == L'.'){
+            // Check if it's a unary decimal (start of expr or follows an operator or '(')
+            bool isUnary = (i == 0 || 
+                            expr[i - 1] == L'+' || 
+                            expr[i - 1] == L'-' || 
+                            expr[i - 1] == L'*' || 
+                            expr[i - 1] == L'÷' || 
+                            expr[i - 1] == L'(');
+            if (isUnary && (i + 1 < expr.size()) && iswdigit(expr[i + 1])) {
+                result += L"0.";
+
+                // Copy the number
+                ++i;
+                while (i < expr.size() && (iswdigit(expr[i]) || expr[i] == L'.')) {
+                    result += expr[i++];
+                }
+                --i; // adjust since loop will increment again
+                continue;
+            }
+        }
+
         result += c;
     }
 
@@ -209,6 +230,16 @@ std::wstring addSpaces(const std::wstring& expr) {
         }
     }
     return spaced;
+}
+
+bool validDecimal(const sf::String &str){
+    int ct = 0;
+    for(auto x:str){
+        if(ct>1) return false;
+        if(x==L'.') ct++;
+        if(x == L'*' || x == L'÷' || x == L'+' || x == L'-') ct = 0;
+    }
+    return true;
 }
 
 int main()
@@ -347,6 +378,7 @@ int main()
                     tempText.setFont(font);
                     tempText.setCharacterSize(text.getCharacterSize());
                     tempText.setString(newString[newString.getSize()-1]);
+                    if(newString[newString.getSize()-1] == L'.') decimalCt--;
                     newString.erase(newString.getSize()-1);
                     text.setString(newString);
                 }
@@ -356,7 +388,8 @@ int main()
             if (event.type == sf::Event::KeyPressed && !sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && 
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::RShift) && (event.key.code == sf::Keyboard::Enter 
                 || event.key.code == sf::Keyboard::Equal)) {
-                if(!isOperator(text.getString()[text.getString().getSize()-1])){
+                if(!isOperator(text.getString()[text.getString().getSize()-1]) && 
+                    text.getString()[text.getString().getSize()-1] != L'.' && (validDecimal(text.getString()+symbols[13].getString()))){
                     decimalCt = 0;
                     try{
                         std::wstring realInput = (addParentheses(text.getString().toWideString()));
@@ -393,27 +426,27 @@ int main()
                 // Check for SHIFT + '=' → '+' key
                 if ((sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || 
                     sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) && 
-                    event.key.code == sf::Keyboard::Equal) {
+                    event.key.code == sf::Keyboard::Equal && (!isOperator(text.getString()[text.getString().getSize()-1]))) {
                     text.setString(text.getString() + symbols[15].getString());  // '+'
                 }
                 // Check for '-'
-                else if (event.key.code == sf::Keyboard::Dash) {
+                else if (event.key.code == sf::Keyboard::Dash && text.getString()[text.getString().getSize()-1] != L'-') {
                     text.setString(text.getString() + symbols[11].getString());  // '-'
                 }
                 // Check for SHIFT + '8' → '*'
                 else if ((sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || 
                         sf::Keyboard::isKeyPressed(sf::Keyboard::RShift)) && 
-                        event.key.code == sf::Keyboard::Num8) {
+                        event.key.code == sf::Keyboard::Num8 && !isOperator(text.getString()[text.getString().getSize()-1])) {
                     text.setString(text.getString() + symbols[7].getString());   // '*'
                 }
                 // Check for '/'
-                else if (event.key.code == sf::Keyboard::Slash) {
+                else if (event.key.code == sf::Keyboard::Slash && !isOperator(text.getString()[text.getString().getSize()-1])) {
                     text.setString(text.getString() + symbols[3].getString());   // '/'
                 }
                 // Check for '.'
                 else if (event.key.code == sf::Keyboard::Period) {
                     decimalCt++;
-                    if (decimalCt <=1) text.setString(text.getString() + symbols[13].getString());  // '.'
+                    if (validDecimal(text.getString()+symbols[13].getString())) text.setString(text.getString() + symbols[13].getString());  // '.'
                 }
             }
 
@@ -428,7 +461,8 @@ int main()
                         text.setString(text.getString() + curText.getString());
                         break;
                     }
-                    else if(button.getFillColor() == sf::Color(175, 175, 175) && rectToText[&button].getString() == L"="){
+                    else if(button.getFillColor() == sf::Color(175, 175, 175) && rectToText[&button].getString() == L"="
+                        && (validDecimal(text.getString()+symbols[13].getString()))){
                         decimalCt = 0;
                         try{
                             std::wstring realInput = (addParentheses(text.getString().toWideString()));
