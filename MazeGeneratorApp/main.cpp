@@ -33,6 +33,40 @@ std::vector<std::pair<int, int>> dfs(std::pair<int, int> curCell, std::pair<int,
     return pathCells;
 }
 
+std::vector<std::vector<int>> mazeLayout(std::vector<std::pair<int, int>> &gridCells, int blocked){
+    // Seed Randomly
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::vector<std::pair<int, int>> pathSolution;
+    int mazeGenerationCount = 0;
+    do{
+        // Define Maze Solution with Inacessible Grid Blocks using depth-first-search (DFS)
+        std::vector<std::vector<bool>> visited(10, std::vector<bool>(10, false));
+
+        // Select random cells to be blocked
+        std::shuffle(gridCells.begin(), gridCells.end(), gen);
+        for(int i=0; i<blocked; i++) visited[gridCells[i].first][gridCells[i].second] = true;
+
+        // Attempt to find path solution
+        std::vector<std::pair<int, int>> emptyVector;
+        pathSolution = dfs({0, 0}, {9, 9}, emptyVector, visited);
+        mazeGenerationCount++;
+        if(mazeGenerationCount == 100) break;
+        
+    } while(pathSolution.empty() || pathSolution.back() != std::make_pair(9, 9));
+
+    // Transform Path Solution to Binary
+    std::vector<std::vector<int>> grid(10, std::vector<int>(10, 0));
+    for(auto &x : pathSolution){
+        grid[x.first][x.second] = 1;
+    }
+
+    // std::cout << mazeGenerationCount << std::endl;
+
+    return grid;
+}
+
 int main(){
 
     // Initialize constant blocked cells
@@ -61,31 +95,7 @@ int main(){
         }
     }
 
-    
-    // Seed Randomly
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    std::vector<std::pair<int, int>> pathSolution;
-    do{
-        // Define Maze Solution with Inacessible Grid Blocks using depth-first-search (DFS)
-        std::vector<std::vector<bool>> visited(10, std::vector<bool>(10, false));
-
-        // Select random cells to be blocked
-        std::shuffle(gridCells.begin(), gridCells.end(), gen);
-        for(int i=0; i<blocked; i++) visited[gridCells[i].first][gridCells[i].second] = true;
-
-        // Attempt to find path solution
-        std::vector<std::pair<int, int>> emptyVector;
-        pathSolution = dfs({0, 0}, {9, 9}, emptyVector, visited);
-        
-    } while(pathSolution.back() != std::make_pair(9, 9));
-
-    // Print out path solution
-    std::vector<std::vector<int>> grid(10, std::vector<int>(10, 0));
-    for(auto &x : pathSolution){
-        grid[x.first][x.second] = 1;
-    }
+    std::vector<std::vector<int>> grid = mazeLayout(gridCells, blocked);
 
     sf::Event event;
     // Run the program as long as the window is open
@@ -99,6 +109,11 @@ int main(){
 
             // Close if the escape key is pressed
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
+
+            // Generate new maze layout if the mouse is clicked
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left){
+                grid = mazeLayout(gridCells, blocked);
+            }
         }
 
         // Clear the window with solid color
