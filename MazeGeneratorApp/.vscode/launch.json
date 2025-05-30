@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Maze App",
+            "name": "Debug Maze App (Makefile)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/main",
