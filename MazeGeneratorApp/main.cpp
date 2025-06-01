@@ -2,18 +2,37 @@
 #include <iostream>
 #include <random>
 
-std::vector<std::pair<int, int>> dfs(std::pair<int, int> curCell, std::pair<int, int> endCell, 
-    std::vector<std::pair<int, int>> &pathCells, std::vector<std::vector<bool>> &visited){
-    
-    if (curCell == endCell) {
-        pathCells.push_back(curCell);
-        return pathCells;
+const int mazeSize = 30;
+const float wallThickness = 10.f;
+
+struct rectangles{
+    sf::RectangleShape horizontalLine;
+    sf::RectangleShape verticalLine;
+    sf::RectangleShape rect;
+    int row;
+    int col;
+    bool hideVert;
+    bool hideHori;
+};
+
+void dfs(std::pair<int, int> curCell, std::pair<int, int> prevCell, 
+    std::vector<std::pair<rectangles, int>> &pathCells, std::vector<std::vector<bool>> &visited, 
+    std::vector<std::vector<rectangles>> &maze){
+
+    if(prevCell.first != -1){
+        rectangles curRect = maze[curCell.first][curCell.second];
+        rectangles prevRect = maze[prevCell.first][prevCell.second];
+        // 0 to hide vertical line, 1 to hide horizontal line, and 2 to hide no lines
+        if(prevCell.second < curCell.second) pathCells.emplace_back(curRect, 0), pathCells.emplace_back(prevRect, 2);
+        else if(prevCell.first < curCell.first) pathCells.emplace_back(curRect, 1), pathCells.emplace_back(prevRect, 2);
+        else if(prevCell.second > curCell.second) pathCells.emplace_back(prevRect, 0), pathCells.emplace_back(curRect, 2);
+        else if(prevCell.first > curCell.first) pathCells.emplace_back(prevRect, 1), pathCells.emplace_back(curRect, 2);
     }
-    pathCells.push_back(curCell);
     visited[curCell.first][curCell.second] = true;
+
     std::vector<int> dr = {0, -1, 0, 1};
     std::vector<int> dc = {-1, 0, 1, 0};
-
+    
     // Go in a random direction
     std::vector<int> directions = {0, 1, 2, 3};
 
@@ -24,78 +43,145 @@ std::vector<std::pair<int, int>> dfs(std::pair<int, int> curCell, std::pair<int,
     for(int i=0; i<4; i++){
         int nr = curCell.first + dr[directions[i]];
         int nc = curCell.second + dc[directions[i]];
-        if(nr < 0 || nr > 9 || nc < 0 || nc > 9 || visited[nr][nc]) continue;
-        std::vector<std::pair<int, int>> currentCells = dfs({nr, nc}, endCell, pathCells, visited);
-        if(currentCells[currentCells.size()-1] == endCell) return currentCells;
+        if(nr < 0 || nr >= mazeSize || nc < 0 || nc >= mazeSize || visited[nr][nc]) continue;
+        dfs({nr, nc}, {curCell.first, curCell.second}, pathCells, visited, maze);
     }
-    visited[curCell.first][curCell.second] = false;
-    pathCells.pop_back();
-    return pathCells;
 }
 
-std::vector<std::vector<int>> mazeLayout(std::vector<std::pair<int, int>> &gridCells, int blocked){
+std::tuple<std::vector<rectangles>, int, std::pair<int, int>, std::pair<int, int>> mazeLayout(
+    std::vector<std::pair<int, int>> &gridCellsN, std::vector<std::pair<int, int>> &gridCellsE,
+    std::vector<std::pair<int, int>> &gridCellsS, std::vector<std::pair<int, int>> &gridCellsW,
+    std::vector<std::vector<rectangles>> &maze){
     // Seed Randomly
     std::random_device rd;
     std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(0, 3);
+    int wallSelection = dist(gen);
+    std::vector<std::pair<rectangles, bool>> pathSolution;
 
-    std::vector<std::pair<int, int>> pathSolution;
-    int mazeGenerationCount = 0;
-    do{
-        // Define Maze Solution with Inacessible Grid Blocks using depth-first-search (DFS)
-        std::vector<std::vector<bool>> visited(10, std::vector<bool>(10, false));
+    // Define Maze Solution with Inacessible Grid Blocks using depth-first-search (DFS)
+    std::vector<std::vector<bool>> visited(mazeSize, std::vector<bool>(mazeSize, false));
 
-        // Select random cells to be blocked
-        std::shuffle(gridCells.begin(), gridCells.end(), gen);
-        for(int i=0; i<blocked; i++) visited[gridCells[i].first][gridCells[i].second] = true;
+    // Select random start and  end cell
+    std::uniform_int_distribution<> dist2(0, mazeSize);
+    int startCell = dist2(gen);
+    int endCell = dist2(gen);
 
-        // Attempt to find path solution
-        std::vector<std::pair<int, int>> emptyVector;
-        pathSolution = dfs({0, 0}, {9, 9}, emptyVector, visited);
-        mazeGenerationCount++;
-        if(mazeGenerationCount == 100) break;
-        
-    } while(pathSolution.empty() || pathSolution.back() != std::make_pair(9, 9));
+    std::pair<int, int> startCellPair;
+    std::pair<int, int> endCellPair;
 
-    // Transform Path Solution to Binary
-    std::vector<std::vector<int>> grid(10, std::vector<int>(10, 0));
-    for(auto &x : pathSolution){
-        grid[x.first][x.second] = 1;
+    // Use recursive backtracking
+    std::vector<std::pair<rectangles, int>> pathCells;
+
+    if(wallSelection == 0) dfs({0, startCell}, {-1, -1}, pathCells, visited, maze), startCellPair = {0, startCell}, endCellPair = {mazeSize-1, endCell};
+    else if(wallSelection == 1) dfs({0, startCell}, {-1, -1}, pathCells, visited, maze), startCellPair = {startCell, mazeSize-1}, endCellPair = {endCell, 0};
+    else if(wallSelection == 2) dfs({mazeSize-1, startCell}, {-1, -1}, pathCells, visited, maze), startCellPair = {mazeSize-1, startCell}, endCellPair = {0, endCell};
+    else if(wallSelection == 3) dfs({0, startCell}, {-1, -1}, pathCells, visited, maze), startCellPair = {startCell, 0}, endCellPair = {endCell, mazeSize-1};
+
+    // Convert from dfs pathCells to readable form
+    int wallSize = 0;
+    
+    std::vector<std::vector<bool>> inPath(mazeSize, std::vector<bool>(mazeSize, false));
+    std::vector<rectangles> grid;
+    for(int i=0; i<pathCells.size(); i++){
+        if(pathCells[i].second == 0) pathCells[i].first.hideVert = true;
+        else if(pathCells[i].second == 1) pathCells[i].first.hideHori = true;
+        grid.push_back(pathCells[i].first); 
+        inPath[pathCells[i].first.row][pathCells[i].first.col] = true;
     }
-
-    // std::cout << mazeGenerationCount << std::endl;
-
-    return grid;
+    for(int i=0; i<maze.size(); i++){
+        for(int j=0; j<maze[i].size(); j++){
+            if(inPath[i][j]){
+                wallSize++;
+                continue;
+            }
+            else grid.push_back(maze[i][j]);
+        }
+    }
+    
+    return {grid, wallSize, startCellPair, endCellPair};
 }
 
 int main(){
-
-    // Initialize constant blocked cells
-    const int blocked = 15;
 
     // Create Window and define dimensions
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
     const int screenWidth = desktop.width;
     const int screenHeight= desktop.height;
     sf::RenderWindow window(desktop, "Maze", sf::Style::Fullscreen);
+    // sf::RenderWindow window(sf::VideoMode(1200, 800), "Maze", sf::Style::Default);
 
     // Initialize maze and define grid rectangles in maze
-    std::vector<std::pair<int, int>> gridCells(98);
-    const float gridWidth = 150.f;
-    const float gridHeight = 90.f;
-    const float gridStartPosX = screenWidth / 2.f - 4.5*gridWidth;
-    const float gridStartPosY = screenHeight / 2.f - 4.5*gridHeight;
-    sf::RectangleShape maze[10][10];
-    for(int r=0; r<10; r++){
-        for(int c=0; c<10; c++){
+    std::vector<std::pair<int, int>> gridCellsN;
+    std::vector<std::pair<int, int>> gridCellsE;
+    std::vector<std::pair<int, int>> gridCellsS;
+    std::vector<std::pair<int, int>> gridCellsW;
+    
+    std::vector<sf::RectangleShape> gridBoundaries;
+    std::vector<std::pair<int, int>> gridBoundPos;
+
+    const float gridWidth = 1500.f/mazeSize;
+    const float gridHeight = 900.f/mazeSize;
+    const float gridStartPosX = screenWidth / 2.f - mazeSize/2*gridWidth;
+    const float gridStartPosY = screenHeight / 2.f - mazeSize/2*gridHeight;
+    std::vector<std::vector<rectangles>> maze(mazeSize);
+    for(int r=0; r<mazeSize; r++){
+        for(int c=0; c<mazeSize; c++){
+
+            // Set up rectangle and border lines
             sf::RectangleShape rect({gridWidth, gridHeight});
-            rect.setOrigin(rect.getSize().x / 2.f, rect.getSize().y / 2.f);
             rect.setPosition(gridStartPosX + gridWidth*c, gridStartPosY + gridHeight*r);
-            maze[r][c] = rect;
-            if( (r != 0 && c != 0) || (r != 9 && c != 9) ) gridCells[(r*10 + c - 1)] = std::make_pair(r, c);
+            rect.setFillColor(sf::Color::Black);
+            
+            sf::RectangleShape horizontalLine({gridWidth, wallThickness});
+            horizontalLine.setPosition(rect.getPosition().x, rect.getPosition().y);
+            horizontalLine.setFillColor(sf::Color::White);
+            
+            sf::RectangleShape verticalLine({wallThickness, gridHeight});
+            verticalLine.setPosition(rect.getPosition().x, rect.getPosition().y);
+            verticalLine.setFillColor(sf::Color::White);
+
+            rectangles currentRectangle = {horizontalLine, verticalLine, rect, r, c, false};
+
+            maze[r].push_back(currentRectangle);
+
+            if(r==0){
+                gridCellsN.push_back({r, c});
+                sf::RectangleShape gridLine({gridWidth, wallThickness});
+                gridLine.setPosition(rect.getPosition().x, rect.getPosition().y);
+                gridLine.setFillColor(sf::Color::Green);
+                gridBoundaries.push_back(gridLine);
+                gridBoundPos.emplace_back(r, c);
+            }
+            if(c==mazeSize-1){
+                gridCellsE.push_back({r, c});
+                sf::RectangleShape gridLine({wallThickness, gridHeight});
+                gridLine.setPosition(rect.getPosition().x + gridWidth, rect.getPosition().y);
+                gridLine.setFillColor(sf::Color::Green);
+                gridBoundaries.push_back(gridLine);
+                gridBoundPos.emplace_back(r, c);
+            }
+            if(r==mazeSize-1){
+                gridCellsS.push_back({r, c});
+                sf::RectangleShape gridLine({gridWidth, wallThickness});
+                if(c==mazeSize-1) gridLine.setSize({gridWidth + wallThickness, wallThickness});
+                gridLine.setPosition(rect.getPosition().x, rect.getPosition().y + gridHeight);
+                gridLine.setFillColor(sf::Color::Green);
+                gridBoundaries.push_back(gridLine);
+                gridBoundPos.emplace_back(r, c);
+            }
+            if(c==0){
+                gridCellsW.push_back({r, c});
+                sf::RectangleShape gridLine({wallThickness, gridHeight});
+                gridLine.setPosition(rect.getPosition().x, rect.getPosition().y);
+                gridLine.setFillColor(sf::Color::Green);
+                gridBoundaries.push_back(gridLine);
+                gridBoundPos.emplace_back(r, c);
+            }
         }
     }
-
-    std::vector<std::vector<int>> grid = mazeLayout(gridCells, blocked);
+    
+    auto [grid, wallSize, startCell, endCell] = mazeLayout(gridCellsN, gridCellsE, gridCellsS, gridCellsW, maze);
 
     sf::Event event;
     // Run the program as long as the window is open
@@ -112,30 +198,41 @@ int main(){
 
             // Generate new maze layout if the mouse is clicked
             if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left){
-                grid = mazeLayout(gridCells, blocked);
+                std::tie(grid, wallSize, startCell, endCell) = mazeLayout(gridCellsN, gridCellsE, gridCellsS, gridCellsW, maze);
             }
         }
 
         // Clear the window with solid color
         window.clear(sf::Color::Blue);
 
-        // Color rectangles in Path Green
-        for(int r=0; r<grid.size(); r++){
-            for(int c=0; c<grid[r].size(); c++){
-                if(grid[r][c] == 0){
-                    maze[r][c].setFillColor(sf::Color::Black);
-                    maze[r][c].setOutlineColor(sf::Color::White);
-                    maze[r][c].setOutlineThickness(10.f);
-                    window.draw(maze[r][c]);
-                    continue;
-                }
-                maze[r][c].setFillColor({0, 100, 0});
-                maze[r][c].setOutlineColor(sf::Color::White);
-                maze[r][c].setOutlineThickness(10.f);
-                window.draw(maze[r][c]);
-            }
+        
+        // Draw grid walls
+        for(int i=0; i<wallSize; i++){
+            window.draw(grid[i].rect);
+            if(!grid[i].hideVert) window.draw(grid[i].verticalLine);
+            if(!grid[i].hideHori) window.draw(grid[i].horizontalLine);
         }
+        for(int i=wallSize; i<grid.size(); i++){
+            window.draw(grid[i].rect);
+            // window.draw(grid[i].horizontalLine);
+            // window.draw(grid[i].verticalLine);
+        }
+        
+        // Draw grid boundary lines
+        for(int i=0; i<gridBoundaries.size(); i++){
 
+            // Skip if start or end cell
+            if( (gridBoundPos[i] == startCell || gridBoundPos[i] == endCell) && ( (startCell.first == mazeSize-1 && endCell.first == 0) || 
+            (startCell.first == 0 && endCell.first == mazeSize-1)) && 
+            gridBoundaries[i].getSize().y == wallThickness) gridBoundaries[i].setFillColor(sf::Color::Red);
+            else if( (gridBoundPos[i] == startCell || gridBoundPos[i] == endCell) && 
+            ( (startCell.second == mazeSize-1 && endCell.second == 0) || (startCell.second == 0 && endCell.second == mazeSize-1)) &&
+            gridBoundaries[i].getSize().x == wallThickness) gridBoundaries[i].setFillColor(sf::Color::Red);
+
+            window.draw(gridBoundaries[i]);
+            gridBoundaries[i].setFillColor(sf::Color::Green);
+        }
+        
         // Display what was drawn
         window.display();
     }
