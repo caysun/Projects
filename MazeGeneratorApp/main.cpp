@@ -2,7 +2,7 @@
 #include <iostream>
 #include <random>
 
-const int mazeSize = 100;
+const int mazeSize = 50;
 const float wallThickness = 100.f/mazeSize;
 
 void dfs(std::pair<int, int> curCell, std::pair<int, int> prevCell, 
@@ -39,7 +39,8 @@ void dfs(std::pair<int, int> curCell, std::pair<int, int> prevCell,
     }
 }
 
-std::vector<std::vector<bool>> mazeLayout(std::vector<std::vector<sf::RectangleShape>> &maze){
+std::tuple<std::vector<std::vector<bool>>, std::pair<int, int>, std::pair<int, int>> mazeLayout(
+    std::vector<std::vector<sf::RectangleShape>> &maze){
 
     // Seed Randomly start cell, wall, and end cell
     std::random_device rd;
@@ -47,6 +48,7 @@ std::vector<std::vector<bool>> mazeLayout(std::vector<std::vector<sf::RectangleS
     std::uniform_int_distribution<> dist(0, 3);
     int wallSelectionStart = dist(gen);
     std::pair<int, int> startCell;
+    std::pair<int, int> endCell;
     std::vector<std::vector<bool>> pathCells(2*mazeSize+1, std::vector<bool>(2*mazeSize+1, false));
 
     if(wallSelectionStart == 0){
@@ -56,6 +58,7 @@ std::vector<std::vector<bool>> mazeLayout(std::vector<std::vector<sf::RectangleS
         pathCells[0][2*randomPos-1] = true;
 
         int randomPos2 = dist2(gen);
+        endCell = {2*mazeSize-1, 2*randomPos2-1};
         pathCells[2*mazeSize][2*randomPos2-1] = true;
     }
     else if(wallSelectionStart == 1){
@@ -65,6 +68,7 @@ std::vector<std::vector<bool>> mazeLayout(std::vector<std::vector<sf::RectangleS
         pathCells[2*randomPos-1][2*mazeSize] = true;
 
         int randomPos2 = dist2(gen);
+        endCell = {2*randomPos2-1, 1};
         pathCells[2*randomPos2-1][0] = true;
     }
     else if(wallSelectionStart == 2){
@@ -74,6 +78,7 @@ std::vector<std::vector<bool>> mazeLayout(std::vector<std::vector<sf::RectangleS
         pathCells[2*mazeSize][2*randomPos-1] = true;
         
         int randomPos2 = dist2(gen);
+        endCell = {1, 2*randomPos2-1};
         pathCells[0][2*randomPos2-1] = true;
     }
     else if(wallSelectionStart == 3){
@@ -83,6 +88,7 @@ std::vector<std::vector<bool>> mazeLayout(std::vector<std::vector<sf::RectangleS
         pathCells[2*randomPos-1][0] = true;
         
         int randomPos2 = dist2(gen);
+        endCell = {2*randomPos2-1, 2*mazeSize-1};
         pathCells[2*randomPos2-1][2*mazeSize] = true;
     }
     
@@ -91,7 +97,7 @@ std::vector<std::vector<bool>> mazeLayout(std::vector<std::vector<sf::RectangleS
 
     // Use recursive backtracking
     dfs(startCell, {-1, -1}, pathCells, visited, maze);
-    return pathCells;
+    return {pathCells, startCell, endCell};
 }
 
 int main(){
@@ -103,6 +109,16 @@ int main(){
     sf::RenderWindow window(desktop, "Maze", sf::Style::Fullscreen);
     // sf::RenderWindow window(sf::VideoMode(1200, 800), "Maze", sf::Style::Default);
     
+    // Load Background
+    sf::Texture textureBackground;
+    if(!textureBackground.loadFromFile("assets/gameBackgroundHard.jpeg")){
+        return -1;
+    }
+    sf::Sprite gameBackground(textureBackground);
+    gameBackground.setPosition(0.f, 0.f);
+    gameBackground.setScale((float)(window.getSize().x/(float)(textureBackground.getSize().x)), 
+    (float)(window.getSize().y/(float)(textureBackground.getSize().y)));
+
     std::vector<sf::RectangleShape> gridBoundaries;
     std::vector<std::pair<int, int>> gridBoundPos;
 
@@ -142,7 +158,77 @@ int main(){
         }
     }
     
-    std::vector<std::vector<bool>> grid = mazeLayout(maze);
+    auto [grid, startCell, endCell] = mazeLayout(maze);
+
+    sf::Texture texture;
+    if (!texture.loadFromFile("assets/sprite.png")) {
+        // Handle the error
+        return -1;
+    }
+    
+    sf::Texture finishTexture;
+    if(!finishTexture.loadFromFile("assets/finishLine.png")){
+        return -1;
+    }
+
+    sf::Sprite finishLine(finishTexture);
+    finishLine.setScale(2.5f/mazeSize, 2.5f/mazeSize);
+    sf::FloatRect boundsFinish = finishLine.getLocalBounds();
+    finishLine.setOrigin({boundsFinish.width/2.f, boundsFinish.height/2.f});
+
+    sf::Sprite player;
+    float carPosX = maze[startCell.first][startCell.second].getPosition().x + gridWidth/2.f;
+    float carPosY = maze[startCell.first][startCell.second].getPosition().y;
+    float carAngle = 0.0;
+    float carDeltaX = 5.f*10.f/mazeSize;
+    float carDeltaY = 5.f*10.f/mazeSize;
+    float carSizeScale = 0.425f * 10.f/mazeSize;
+    player.setScale({carSizeScale, carSizeScale});
+    player.setTexture(texture);
+    sf::FloatRect bounds = player.getLocalBounds();
+    player.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
+
+    if(startCell.first == 1 && endCell.first == 2*mazeSize-1){ // North
+        player.setRotation(90.f);
+        // carAngle = 
+
+        finishLine.setRotation(180.f);
+        float finishPosX = maze[endCell.first][endCell.second].getPosition().x + gridWidth/2.f;
+        float finishPosY = maze[endCell.first][endCell.second].getPosition().y + gridHeight + 10.f;
+        finishLine.setPosition(finishPosX, finishPosY);
+    }
+    else if(startCell.first == 2*mazeSize-1 && endCell.first == 1){ // South
+        player.setRotation(-90.f);
+        carPosX = maze[startCell.first][startCell.second].getPosition().x + gridWidth/2.f;
+        carPosY = maze[startCell.first][startCell.second].getPosition().y + gridHeight;
+
+        finishLine.setRotation(0.f);
+        float finishPosX = maze[endCell.first][endCell.second].getPosition().x + gridWidth/2.f;
+        float finishPosY = maze[endCell.first][endCell.second].getPosition().y - 10.f;
+        finishLine.setPosition(finishPosX, finishPosY);
+    }
+    else if(startCell.second == 2*mazeSize-1 && endCell.second == 1){ // East
+        player.setRotation(180.f);
+        carPosX = maze[startCell.first][startCell.second].getPosition().x + gridWidth;
+        carPosY = maze[startCell.first][startCell.second].getPosition().y + gridHeight/2.f;
+
+        finishLine.setRotation(-90.f);
+        float finishPosX = maze[endCell.first][endCell.second].getPosition().x - 10.f;
+        float finishPosY = maze[endCell.first][endCell.second].getPosition().y + gridHeight/2.f;
+        finishLine.setPosition(finishPosX, finishPosY);
+    }
+    else{ // West
+        carPosX = maze[startCell.first][startCell.second].getPosition().x;
+        carPosY = maze[startCell.first][startCell.second].getPosition().y + gridHeight/2.f;
+
+        finishLine.setRotation(90.f);
+        float finishPosX = maze[endCell.first][endCell.second].getPosition().x + gridWidth + 10.f;
+        float finishPosY = maze[endCell.first][endCell.second].getPosition().y + gridHeight/2.f;
+        finishLine.setPosition(finishPosX, finishPosY);
+    }
+
+    player.setPosition(carPosX, carPosY);
+
 
     sf::Event event;
     // Run the program as long as the window is open
@@ -159,12 +245,35 @@ int main(){
 
             // Generate new maze layout if the mouse is clicked
             if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left){
-                grid = mazeLayout(maze);
+                // tie(grid, startCell, endCell) = mazeLayout(maze);
             }
+
+            // Move car through maze with arrow keys
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Up){
+                carPosY -= carDeltaY;
+                player.setPosition(carPosX, carPosY);
+                player.setRotation(-90.f);
+            } // Up
+            else if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Down){
+                carPosY += carDeltaY;
+                player.setPosition(carPosX, carPosY);
+                player.setRotation(90.f);
+            } // Down
+            else if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Right){
+                carPosX += carDeltaX;
+                player.setPosition(carPosX, carPosY);
+                player.setRotation(0.f);
+            } // Right
+            else if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Left){
+                carPosX -= carDeltaX;
+                player.setPosition(carPosX, carPosY);
+                player.setRotation(180.f);
+            } // Left
         }
 
-        // Clear the window with solid color
-        window.clear(sf::Color::Blue);
+        // Draw background image and finish line
+        window.draw(gameBackground);
+        window.draw(finishLine);
 
         // Draw background cells
         for(int r=0; r<maze.size(); r++){
@@ -186,7 +295,7 @@ int main(){
                 }
             }
         }
-        
+        window.draw(player);
         // Display what was drawn
         window.display();
     }
