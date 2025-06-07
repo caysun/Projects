@@ -5,6 +5,8 @@
 
 const int mazeSize = 10;
 const float wallThickness = 100.f/mazeSize;
+const float wallToleranceEasy = 0.0009f;
+const float wallToleranceHard = 0.00005f;
 
 void dfs(std::pair<int, int> curCell, std::pair<int, int> prevCell, 
     std::vector<std::vector<bool>> &pathCells, std::vector<std::vector<bool>> &visited, 
@@ -171,7 +173,7 @@ bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall, float carS
         float carMin, carMax, wallMin, wallMax;
         mapPointsOntoAxis(carAxes[i], carCorners, carMin, carMax);
         mapPointsOntoAxis(carAxes[i], wallCorners, wallMin, wallMax);
-        if(carMax - 0.009*carSize < wallMin || wallMax - 0.009*carSize< carMin) return false; // TODO: Define as constants for different maps
+        if(carMax - wallToleranceHard*carSize < wallMin || wallMax - wallToleranceHard*carSize< carMin) return false; // TODO: Define as constants for different maps
     }
     
     for(int i=0; i<wallAxes.size(); i++){
@@ -185,7 +187,7 @@ bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall, float carS
 }
 
 
-int main(){
+void displayMaze(){
 
     // Create Window and define dimensions
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
@@ -197,7 +199,7 @@ int main(){
     // Load Background
     sf::Texture textureBackground;
     if(!textureBackground.loadFromFile("assets/gameBackgroundHard.jpeg")){
-        return -1;
+        return;
     }
     sf::Sprite gameBackground(textureBackground);
     gameBackground.setPosition(0.f, 0.f);
@@ -249,12 +251,12 @@ int main(){
     sf::Texture texture;
     if (!texture.loadFromFile("assets/sprite.png")) {
         // Handle the error
-        return -1;
+        return;
     }
     
     sf::Texture finishTexture;
     if(!finishTexture.loadFromFile("assets/finishLine.png")){
-        return -1;
+        return;
     }
 
     sf::Sprite finishLine(finishTexture);
@@ -326,7 +328,7 @@ int main(){
     sf::Text timerText;
     sf::Font font;
     if(!font.loadFromFile("/usr/share/fonts/truetype/msttcorefonts/arial.ttf")){
-        return -1;
+        return;
     }
     timerText.setFont(font);
     timerText.setCharacterSize(70);
