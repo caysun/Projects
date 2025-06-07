@@ -1,8 +1,9 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <random>
+#include<sstream>
 
-const int mazeSize = 30;
+const int mazeSize = 10;
 const float wallThickness = 100.f/mazeSize;
 
 void dfs(std::pair<int, int> curCell, std::pair<int, int> prevCell, 
@@ -160,7 +161,7 @@ void mapPointsOntoAxis(sf::Vector2f &axis, std::vector<sf::Vector2f> &corners, f
     }
 }
 
-bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall){
+bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall, float carSize){
     std::vector<sf::Vector2f> carCorners = getCorners(car);
     std::vector<sf::Vector2f> wallCorners = getCorners(wall);
     std::vector<sf::Vector2f> carAxes = getAxes(carCorners);
@@ -170,7 +171,7 @@ bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall){
         float carMin, carMax, wallMin, wallMax;
         mapPointsOntoAxis(carAxes[i], carCorners, carMin, carMax);
         mapPointsOntoAxis(carAxes[i], wallCorners, wallMin, wallMax);
-        if(carMax < wallMin || wallMax < carMin) return false;
+        if(carMax - 0.009*carSize < wallMin || wallMax - 0.009*carSize< carMin) return false; // TODO: Define as constants for different maps
     }
     
     for(int i=0; i<wallAxes.size(); i++){
@@ -271,6 +272,7 @@ int main(){
     float carSizeScale = 0.225f * 10.f/mazeSize;
     player.setScale({carSizeScale, carSizeScale});
     player.setTexture(texture);
+    float carSizeArea = player.getLocalBounds().getSize().x * player.getLocalBounds().getSize().y;
     sf::FloatRect bounds = player.getLocalBounds();
     player.setOrigin(bounds.width / 2.f, bounds.height / 2.f);
 
@@ -319,6 +321,21 @@ int main(){
 
     sf::Event event;
     sf::Clock clock;
+    
+    // Create timer text
+    sf::Text timerText;
+    sf::Font font;
+    if(!font.loadFromFile("/usr/share/fonts/truetype/msttcorefonts/arial.ttf")){
+        return -1;
+    }
+    timerText.setFont(font);
+    timerText.setCharacterSize(70);
+    timerText.setFillColor(sf::Color::Black);
+
+    sf::Clock totalTime;
+    float endTime = 0.0f;
+    bool finished = false;
+    bool started = false;
     // Run the program as long as the window is open
     while (window.isOpen())
     {
@@ -342,16 +359,24 @@ int main(){
         float dirY = 0.0f;
         
         // Move car through maze with arrow keys
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)){
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)  && !finished){
+            // Start Timer
+            if(!started) totalTime.restart(), started = true;
             dirY -= 1.f;
         } // Up
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)){
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)  && !finished){
+            // Start Timer
+            if(!started) totalTime.restart(), started = true;
             dirY += 1.f;
         } // Down
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)){
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)  && !finished){
+            // Start Timer
+            if(!started) totalTime.restart(), started = true;
             dirX += 1.f;
         } // Right
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)){
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)  && !finished){
+            // Start Timer
+            if(!started) totalTime.restart(), started = true;
             dirX -= 1.f;
         } // Left
         
@@ -365,8 +390,7 @@ int main(){
             int mazeColumn = 2*(static_cast<int>((carProjPosX-gridStartPosX)/(gridWidth))) + 1;
             int mazeRow = 2*(static_cast<int>((carProjPosY-gridStartPosY)/(gridHeight))) + 1;
             if(player.getPosition().y >= maze[endCell.first][endCell.second].getPosition().y + gridHeight){
-                std::cout << "Nice job man!" << std::endl;
-                window.close();
+                if(!finished) endTime = totalTime.getElapsedTime().asSeconds(), finished = true;
             }
             
             bool intersectsWall = false;
@@ -403,7 +427,7 @@ int main(){
 
 
                         carBoundingBox = playerRect;
-                        if(wallCollision(playerRect, maze[mazeRow+dr][mazeColumn+dc])){
+                        if(wallCollision(playerRect, maze[mazeRow+dr][mazeColumn+dc], carSizeArea)){
                             intersectsWall = true;
                             player.setPosition(carPosX, carPosY);
                             player.setRotation(orignialCarAngle);
@@ -420,7 +444,7 @@ int main(){
                 int c = mazeColumn + extraDc[i];
                 if(r < 0 || r > 2*mazeSize || c < 0 || c > 2*mazeSize) continue;
                 if(!grid[r][c]){
-                    if(wallCollision(playerRect, maze[r][c])){
+                    if(wallCollision(playerRect, maze[r][c], carSizeArea)){
                         intersectsWall = true;
                         player.setPosition(carPosX, carPosY);
                         player.setRotation(orignialCarAngle);
@@ -463,6 +487,21 @@ int main(){
         window.draw(player);
         // window.draw(carBoundingBox);
         for(auto &w : wallBoundingBoxes) window.draw(w);
+
+        // Draw Time Text
+        float elapsed;
+        if(finished) elapsed = endTime;
+        else if(!started) elapsed = 0.0f;
+        else elapsed = totalTime.getElapsedTime().asSeconds();
+        std::ostringstream ss;
+        ss.precision(2);
+        ss << std::fixed << "Time: " << elapsed << " s";
+        timerText.setString(ss.str());
+        sf::FloatRect timerBounds = timerText.getLocalBounds();
+        timerText.setOrigin(timerBounds.width/2.f, timerBounds.height/2.f);
+        timerText.setPosition(screenWidth/2.f, 35.f);
+        window.draw(timerText);
+
         // Display what was drawn
         window.display();
     }
