@@ -187,19 +187,17 @@ bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall, float carS
 }
 
 
-void displayMaze(){
+float displayMaze(sf::RenderWindow &window){
 
     // Create Window and define dimensions
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
     const int screenWidth = desktop.width;
-    const int screenHeight= desktop.height;
-    sf::RenderWindow window(desktop, "Maze", sf::Style::Fullscreen);
-    // sf::RenderWindow window(sf::VideoMode(1200, 800), "Maze", sf::Style::Default);
+    const int screenHeight = desktop.height;
     
     // Load Background
     sf::Texture textureBackground;
     if(!textureBackground.loadFromFile("assets/gameBackgroundHard.jpeg")){
-        return;
+        std::cout << "could not load from file" << std::endl;
     }
     sf::Sprite gameBackground(textureBackground);
     gameBackground.setPosition(0.f, 0.f);
@@ -251,12 +249,12 @@ void displayMaze(){
     sf::Texture texture;
     if (!texture.loadFromFile("assets/sprite.png")) {
         // Handle the error
-        return;
+        std::cout << "could not load from file" << std::endl;
     }
     
     sf::Texture finishTexture;
     if(!finishTexture.loadFromFile("assets/finishLine.png")){
-        return;
+        std::cout << "could not load from file" << std::endl;
     }
 
     sf::Sprite finishLine(finishTexture);
@@ -328,7 +326,7 @@ void displayMaze(){
     sf::Text timerText;
     sf::Font font;
     if(!font.loadFromFile("/usr/share/fonts/truetype/msttcorefonts/arial.ttf")){
-        return;
+        return 0.0f;
     }
     timerText.setFont(font);
     timerText.setCharacterSize(70);
@@ -393,6 +391,7 @@ void displayMaze(){
             int mazeRow = 2*(static_cast<int>((carProjPosY-gridStartPosY)/(gridHeight))) + 1;
             if(player.getPosition().y >= maze[endCell.first][endCell.second].getPosition().y + gridHeight){
                 if(!finished) endTime = totalTime.getElapsedTime().asSeconds(), finished = true;
+                return endTime;
             }
             
             bool intersectsWall = false;
@@ -507,4 +506,5 @@ void displayMaze(){
         // Display what was drawn
         window.display();
     }
+    return 0.0f;
 }

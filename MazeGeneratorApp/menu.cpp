@@ -1,5 +1,13 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include "mazeGame.h"
+
+enum gameState {
+    MENU,
+    MAZE,
+    END_SCREEN
+};
+gameState currentState = MENU;
 
 int main(){
 
@@ -39,7 +47,9 @@ int main(){
     startText.setOrigin(startTextBounds.left + startTextBounds.width / 2.f, startTextBounds.top + startTextBounds.height / 2.f);
     startText.setPosition(startButton.getPosition());
 
+    bool showScore = false;
 
+    float finalTime;
     sf::Event event;
     while(window.isOpen())
     {
@@ -56,9 +66,18 @@ int main(){
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
             // Run main maze game
-            if (event.type == sf::Event::MouseButtonPressed && startButton.getGlobalBounds().contains(mousePosF) && 
-                event.mouseButton.button == sf::Mouse::Button::Left){
-                std:: cout << "Nice" << std::endl;
+            if(currentState == MENU){
+                if (event.type == sf::Event::MouseButtonPressed && startButton.getGlobalBounds().contains(mousePosF) && 
+                    event.mouseButton.button == sf::Mouse::Button::Left){
+                    finalTime = displayMaze(window);
+                    showScore = true;
+                }
+            }
+            else if(currentState == MAZE){
+
+            }
+            else if(currentState == END_SCREEN){
+
             }
 
         }
@@ -68,6 +87,10 @@ int main(){
         window.draw(menuBackground);
         window.draw(startButton);
         window.draw(startText);
+        if(showScore){
+            std::cout << finalTime << std::endl;
+            window.close();
+        }
         window.display();
     }
     return 0;
