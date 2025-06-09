@@ -3,10 +3,13 @@
 #include <random>
 #include<sstream>
 
-const int mazeSize = 10;
-const float wallThickness = 100.f/mazeSize;
-const float wallToleranceEasy = 0.0009f;
+int mazeSize = 10;
+float wallThickness;
+const float wallToleranceEasy = 0.00005f;
+const float wallToleranceMedium = 0.00005f;
 const float wallToleranceHard = 0.00005f;
+float wallTolerance;
+float scale;
 
 void dfs(std::pair<int, int> curCell, std::pair<int, int> prevCell, 
     std::vector<std::vector<bool>> &pathCells, std::vector<std::vector<bool>> &visited, 
@@ -173,7 +176,7 @@ bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall, float carS
         float carMin, carMax, wallMin, wallMax;
         mapPointsOntoAxis(carAxes[i], carCorners, carMin, carMax);
         mapPointsOntoAxis(carAxes[i], wallCorners, wallMin, wallMax);
-        if(carMax - wallToleranceHard*carSize < wallMin || wallMax - wallToleranceHard*carSize< carMin) return false; // TODO: Define as constants for different maps
+        if(carMax - wallTolerance*carSize < wallMin || wallMax - wallTolerance*carSize< carMin) return false; // TODO: Define as constants for different maps
     }
     
     for(int i=0; i<wallAxes.size(); i++){
@@ -187,7 +190,29 @@ bool wallCollision(sf::RectangleShape &car, sf::RectangleShape &wall, float carS
 }
 
 
-float displayMaze(sf::RenderWindow &window){
+float displayMaze(sf::RenderWindow &window, int difficulty){
+
+    switch(difficulty){
+        case 0:
+            mazeSize = 10;
+            wallThickness = 1000.f/mazeSize/mazeSize;
+            wallTolerance = wallToleranceEasy;
+            scale = 10.f;
+            break;
+        case 1:
+            mazeSize = 20;
+            wallThickness = 1000.f/mazeSize/mazeSize;
+            wallTolerance = wallToleranceMedium;
+            scale = 10.f;
+            break;
+        case 2:
+            mazeSize = 30;
+            wallThickness = 1000.f/mazeSize/mazeSize;
+            wallTolerance = wallToleranceHard;
+            scale = 10.f;
+            break;
+    }
+
 
     // Create Window and define dimensions
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
@@ -244,7 +269,7 @@ float displayMaze(sf::RenderWindow &window){
     }
     
     auto [grid, startCell, endCell] = mazeLayout(maze);
-    addExtraWalls(grid, maze, 10.f);
+    addExtraWalls(grid, maze, scale);
 
     sf::Texture texture;
     if (!texture.loadFromFile("assets/sprite.png")) {
@@ -332,6 +357,23 @@ float displayMaze(sf::RenderWindow &window){
     timerText.setCharacterSize(70);
     timerText.setFillColor(sf::Color::Black);
 
+    // Create Home Button
+    sf::RectangleShape homeButton({165.f, 50.f});
+    homeButton.setOutlineColor(sf::Color::Black);
+    homeButton.setOutlineThickness(5.f);
+    sf::FloatRect homeBounds = homeButton.getLocalBounds();
+    homeButton.setOrigin(homeBounds.width/2.f, homeBounds.height/2.f);
+    homeButton.setPosition(100.f, 100.f);
+
+    sf::Text homeText;
+    homeText.setFont(font);
+    homeText.setFillColor(sf::Color::Black);
+    homeText.setString("HOME");
+    homeText.setCharacterSize(50);
+    sf::FloatRect homeTextBounds = homeText.getLocalBounds();
+    homeText.setOrigin(homeTextBounds.left + homeTextBounds.width / 2.f, homeTextBounds.top + homeTextBounds.height / 2.f);
+    homeText.setPosition(homeButton.getPosition().x - 3.f, homeButton.getPosition().y - 5.f);
+
     sf::Clock totalTime;
     float endTime = 0.0f;
     bool finished = false;
@@ -339,6 +381,10 @@ float displayMaze(sf::RenderWindow &window){
     // Run the program as long as the window is open
     while (window.isOpen())
     {
+        //Make mouse position relative to window and converted to float for comparison with rectangle
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        sf::Vector2f mousePosF(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+
         float deltaTime = clock.restart().asSeconds();
         // Process Events
         while(window.pollEvent(event))
@@ -351,7 +397,9 @@ float displayMaze(sf::RenderWindow &window){
             
             // Generate new maze layout if the mouse is clicked
             if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left){
-                // tie(grid, startCell, endCell) = mazeLayout(maze);
+                if (homeButton.getGlobalBounds().contains(mousePosF)){
+                    return 0.0f;
+                }
             }
         }
         
@@ -361,22 +409,22 @@ float displayMaze(sf::RenderWindow &window){
         // Move car through maze with arrow keys
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)  && !finished){
             // Start Timer
-            if(!started) totalTime.restart(), started = true;
+            if(!started) started = true;
             dirY -= 1.f;
         } // Up
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)  && !finished){
             // Start Timer
-            if(!started) totalTime.restart(), started = true;
+            if(!started) started = true;
             dirY += 1.f;
         } // Down
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)  && !finished){
             // Start Timer
-            if(!started) totalTime.restart(), started = true;
+            if(!started) started = true;
             dirX += 1.f;
         } // Right
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)  && !finished){
             // Start Timer
-            if(!started) totalTime.restart(), started = true;
+            if(!started) started = true;
             dirX -= 1.f;
         } // Left
         
@@ -422,7 +470,7 @@ float displayMaze(sf::RenderWindow &window){
                         sf::RectangleShape wallIntersection = maze[mazeRow+dr][mazeColumn+dc];
                         wallIntersection.setFillColor(sf::Color::Transparent);
                         wallIntersection.setOutlineColor({0, 255, 255, 50});
-                        wallIntersection.setOutlineThickness(5.f);
+                        wallIntersection.setOutlineThickness(50.f / mazeSize);
                         wallIntersection.setFillColor({128, 0, 128, 50});
                         wallBoundingBoxes.push_back(wallIntersection);
 
@@ -492,7 +540,6 @@ float displayMaze(sf::RenderWindow &window){
         // Draw Time Text
         float elapsed;
         if(finished) elapsed = endTime;
-        else if(!started) elapsed = 0.0f;
         else elapsed = totalTime.getElapsedTime().asSeconds();
         std::ostringstream ss;
         ss.precision(2);
@@ -502,7 +549,11 @@ float displayMaze(sf::RenderWindow &window){
         timerText.setOrigin(timerBounds.width/2.f, timerBounds.height/2.f);
         timerText.setPosition(screenWidth/2.f, 35.f);
         window.draw(timerText);
-
+        
+        if(homeButton.getGlobalBounds().contains(mousePosF)) homeButton.setFillColor({200, 200, 200, 50});
+        else homeButton.setFillColor({255, 255, 255, 50});
+        window.draw(homeButton);
+        window.draw(homeText);
         // Display what was drawn
         window.display();
     }
