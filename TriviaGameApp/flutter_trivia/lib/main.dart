@@ -5,24 +5,34 @@ import 'dart:async';
 import 'dart:convert';
 
 Future<String> readQuestions() async {
-  final dir = await rootBundle.loadString('assets/trivia_test_s.json');
-  // final file = File('${dir.path}/trivia_test_s.json');
 
-  // if(await file.exists()){
-  //   final contents = await file.readAsString();
-  //   return contents;
-  // } else {
-  //   print('File does not exist');
-  //   return "";
-  // }
-  return "";
+  try {
+    final String contents = await rootBundle.loadString('assets/trivia_test_s.json');
+    return contents;
+  } catch(e) {
+    print('File does not exist');
+    return "";
+  }
+
 }
 
+// cl
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final questions = await readQuestions();
-  // List<dynamic> data = jsonDecode(questions);
+  Map<String, dynamic> data = jsonDecode(questions);
+  data.forEach((key, value) {
+    print('Key: $key');
+    if (value is Map<String, dynamic>) {
+      value.forEach((k, v) {
+        print('  $k: $v');
+      });
+    } else {
+      print('  Value: $value');
+    }
+    print('---');
+  });
 
   runApp(const MainApp());
 }
