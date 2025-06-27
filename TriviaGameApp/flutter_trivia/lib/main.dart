@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:html_unescape/html_unescape.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
@@ -77,31 +78,57 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int currentQuestionIndex = 0;
+  int correctAnswers = 0;
+  int totalAnswers = 0;
   String selectedAnswer = "";
-  void _showNextQuestion() {
+  bool showCorrectState = false;
+  bool answered = false;
+  bool isCorrect = false;
+  final AudioPlayer player = AudioPlayer();
+
+  Future<void> _playSound(bool isCorrect) async{
+    await player.play(AssetSource(isCorrect ? 'sounds/correctAnswer.mp3' : 
+      'sounds/incorrectAnswer.mp3'));
+  }
+
+  void _showNextQuestion() async{
+
     setState(() {
       if (currentQuestionIndex < widget.triviaList.length - 1) {
         currentQuestionIndex++;
       } else {
         currentQuestionIndex = 0; // Restart or end
       }
+      selectedAnswer = "";
+      showCorrectState = false;
+      answered = false;
     });
   }
 
   void _handleAnswerTap(String answer) async{
+    if(answered) return;
+
     setState((){
       selectedAnswer = answer;
+      answered = true;
     });
 
-    // Here you can check if the answer is correct
-    print('User tapped on: $answer');
-
-    // Move to next question after tap
-    await Future.delayed(const Duration(milliseconds: 1000));
+    // Check if selected answer is correct
+    String correctAnswer = widget.triviaList[currentQuestionIndex].correctAnswer;
+    isCorrect = answer == correctAnswer;
+    if(isCorrect) showCorrectState = true;
+    await _playSound(isCorrect);
+    await Future.delayed(Duration(milliseconds:2000));
     _showNextQuestion();
-    setState((){
-      selectedAnswer = "";
-    });
+  }
+
+  Color _getAnswerColor(String answer){
+    if(!answered){
+      return selectedAnswer == answer ? Colors.blue[200]! : Colors.grey[200]!;
+    }
+    if(answer == widget.triviaList[currentQuestionIndex].correctAnswer) return Colors.green[200]!;
+    if(answer == selectedAnswer) return Colors.red[200]!;
+    return Colors.grey[200]!;
   }
 
   @override
@@ -134,7 +161,7 @@ class _MainAppState extends State<MainApp> {
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: selectedAnswer == answer ? Colors.blue[200] : Colors.grey[200],
+                          color: _getAnswerColor(answer),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey.shade400),
                         ),
