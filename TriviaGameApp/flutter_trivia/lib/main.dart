@@ -12,7 +12,7 @@ final unescape = HtmlUnescape();
 Future<String> readQuestions() async {
 
   try {
-    final String contents = await rootBundle.loadString('assets/trivia_test_s.json');
+    final String contents = await rootBundle.loadString('assets/trivia_test.json');
     return contents;
   } catch(e) {
     print('File does not exist');
@@ -48,7 +48,7 @@ void main() async {
   final questions = await readQuestions();
   Map<String, dynamic> data = jsonDecode(questions);
   List<dynamic> triviaInfo = data['results'];
-  List<Question> triviaList = [];
+  List<Question> allQuestions = [];
   for(var info in triviaInfo){
     if(info is Map<String, dynamic>){
       Question question = Question(
@@ -60,9 +60,11 @@ void main() async {
         info['incorrect_answers'],
         getShuffledAnswers(info['correct_answer'], info['incorrect_answers']),
       );
-      triviaList.add(question);
+      allQuestions.add(question);
     }
   }
+  allQuestions.shuffle(Random());
+  List<Question> triviaList = allQuestions.take(20).toList();
   runApp(MainApp(triviaList: triviaList));
 }
 
@@ -78,8 +80,8 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int currentQuestionIndex = 0;
-  int correctAnswers = 0;
-  int totalAnswers = 0;
+  int correctAnswerCount = 0;
+  int totalAnswerCount = 0;
   String selectedAnswer = "";
   bool showCorrectState = false;
   bool answered = false;
@@ -117,6 +119,8 @@ class _MainAppState extends State<MainApp> {
     String correctAnswer = widget.triviaList[currentQuestionIndex].correctAnswer;
     isCorrect = answer == correctAnswer;
     if(isCorrect) showCorrectState = true;
+    if(isCorrect) correctAnswerCount++;
+    totalAnswerCount++;
     await _playSound(isCorrect);
     await Future.delayed(Duration(milliseconds:2000));
     _showNextQuestion();
@@ -139,45 +143,62 @@ class _MainAppState extends State<MainApp> {
       title: 'Trivia Game',
       home: Scaffold(
         appBar: AppBar(title: const Text('Trivia Game')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  unescape.convert(question.triviaQuestion),
+        body: Stack(
+          children: [
+          // Score at the top center
+            Positioned(
+              top: 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  'Score: $correctAnswerCount / $totalAnswerCount', // your score variable
                   style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
-                ...question.combinedAnswers.map(
-                  (answer) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6.0),
-                    child: InkWell( 
-                      onTap: () => _handleAnswerTap(answer),
-                      borderRadius: BorderRadius.circular(12),
-                      splashColor: Colors.blueAccent.withOpacity(0.3),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _getAnswerColor(answer),
+              ),
+            ),
+
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      unescape.convert(question.triviaQuestion),
+                      style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ...question.combinedAnswers.map(
+                      (answer) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: InkWell( 
+                          onTap: () => _handleAnswerTap(answer),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade400),
-                        ),
-                        child: Center(
-                          child: Text(
-                            unescape.convert(answer),
-                            style: const TextStyle(fontSize: 16),
+                          splashColor: Colors.blueAccent.withOpacity(0.3),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: _getAnswerColor(answer),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade400),
+                            ),
+                            child: Center(
+                              child: Text(
+                                unescape.convert(answer),
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

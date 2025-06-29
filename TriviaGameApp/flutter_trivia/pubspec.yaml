@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   html_unescape: ^2.0.0
   audioplayers: ^5.2.1
+  http: ^0.13.6
 
 dev_dependencies:
   flutter_test:
@@ -20,6 +21,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    -  assets/trivia_test_s.json
+    -  assets/trivia_test.json
     -  assets/sounds/correctAnswer.mp3
     -  assets/sounds/incorrectAnswer.mp3
