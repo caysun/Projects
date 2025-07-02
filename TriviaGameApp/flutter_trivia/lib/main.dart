@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:html_unescape/html_unescape.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
@@ -21,64 +22,168 @@ Future<String> readQuestions() async {
 
 }
 
-List<String> getShuffledAnswers(String correctAnswer, List<dynamic> incorrectAnswers) {
-  // Combine correct and incorrect answers
-  List<String> allAnswers = List.from(incorrectAnswers); // Make a copy to avoid modifying original list
-  allAnswers.add(correctAnswer);
-  // Shuffle the list
-  allAnswers.shuffle(Random());
-  return allAnswers;
+Future<void> loadStats() async {
+  final prefs = await SharedPreferences.getInstance();
+  int? saved = prefs.getInt('numRounds');
+  if (saved != null) numRounds = saved;
+  double? saved2 = prefs.getDouble('average');
+  if (saved2 != null) average = saved2;
+  int? saved3 = prefs.getInt('highScore');
+  if (saved3 != null) highScore = saved3;
 }
 
 class Question {
-  String type;
-  String difficulty;
-  String category;
   String triviaQuestion;
+  String category;
   String correctAnswer;
-  List<dynamic> incorrectAnswers;
-  List<String> combinedAnswers;
+  List<dynamic> combinedAnswers;
 
-  Question(this.type, this.difficulty, this.category, this.triviaQuestion, 
-  this.correctAnswer, this.incorrectAnswers, this.combinedAnswers);
+  Question(this.triviaQuestion, this.category, 
+  this.correctAnswer, this.combinedAnswers);
 }
+
+int latestScore = -1;
+int highScore = -1;
+int numRounds = 0;
+double average = 0.0;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final questions = await readQuestions();
-  Map<String, dynamic> data = jsonDecode(questions);
-  List<dynamic> triviaInfo = data['results'];
+  await loadStats();
+  List<dynamic> triviaInfo = jsonDecode(questions);
   List<Question> allQuestions = [];
   for(var info in triviaInfo){
     if(info is Map<String, dynamic>){
+      if(info['choices'].length == 2) continue;
+      info['choices'].shuffle(Random());
       Question question = Question(
-        info['type'],
-        info['difficulty'],
-        info['category'],
         info['question'],
-        info['correct_answer'],
-        info['incorrect_answers'],
-        getShuffledAnswers(info['correct_answer'], info['incorrect_answers']),
+        info['category'],
+        info['answer'],
+        info['choices'],
       );
       allQuestions.add(question);
     }
   }
-  allQuestions.shuffle(Random());
-  List<Question> triviaList = allQuestions.take(20).toList();
-  runApp(MainApp(triviaList: triviaList));
+  runApp(MainApp(allQuestions: allQuestions));
 }
 
-
-class MainApp extends StatefulWidget {
-  final List<Question> triviaList;
-
-  const MainApp({super.key, required this.triviaList});
+class MainApp extends StatelessWidget {
+  List<Question> allQuestions;
+  MainApp({super.key, required this.allQuestions});
 
   @override
-  State<MainApp> createState() => _MainAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: "Triva Master",
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: Menu(allQuestions: allQuestions),  
+    );
+  }
 }
 
-class _MainAppState extends State<MainApp> {
+class Menu extends StatefulWidget {
+  List<Question> allQuestions;
+  Menu({super.key, required this.allQuestions});
+
+  _MenuState createState() => _MenuState();
+}
+
+class _MenuState extends State<Menu> {
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatsToState();
+  }
+
+  Future<void> _loadStatsToState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      int? saved = prefs.getInt('numRounds');
+      if (saved != null) numRounds = saved;
+      double? saved2 = prefs.getDouble('average');
+      if (saved2 != null) average = saved2;
+      int? saved3 = prefs.getInt('highScore');
+      if (saved3 != null) highScore = saved3;
+      // You could also optionally reset latestScore to -1 here if needed
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return  Scaffold(
+      body: Stack(
+        children: [
+
+          // Latest Score at the top center
+          if (latestScore != -1)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 60),
+                child: Text(
+                  'Last Score: ${latestScore}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          // High Score under last score
+          if (highScore != -1)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 120),
+                child: Text(
+                  'High Score: ${highScore}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          // Latest Score at the top center
+          if (highScore != -1)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 180),
+                child: Text(
+                  'Average Score: ${average.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          Center(
+            child: ElevatedButton(
+              child: const Text('START NEW PUZZLE', style: TextStyle(fontSize: 20.0)),
+              onPressed: (){
+                widget.allQuestions.shuffle(Random());
+                List<Question> triviaList = widget.allQuestions.take(5).toList();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => Game(triviaList: triviaList, allQuestions: widget.allQuestions),
+                  ),
+                );
+              },
+            )
+          )
+        ]
+      )
+    );
+  }
+}
+
+class Game extends StatefulWidget {
+  final List<Question> triviaList;
+  final List<Question> allQuestions;
+  const Game({super.key, required this.triviaList, required this.allQuestions});
+
+  @override
+  State<Game> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<Game> {
   int currentQuestionIndex = 0;
   int correctAnswerCount = 0;
   int totalAnswerCount = 0;
@@ -95,16 +200,29 @@ class _MainAppState extends State<MainApp> {
 
   void _showNextQuestion() async{
 
-    setState(() {
-      if (currentQuestionIndex < widget.triviaList.length - 1) {
+    if (currentQuestionIndex < widget.triviaList.length - 1) {
+      setState(() {
         currentQuestionIndex++;
-      } else {
-        currentQuestionIndex = 0; // Restart or end
-      }
-      selectedAnswer = "";
-      showCorrectState = false;
-      answered = false;
-    });
+        selectedAnswer = "";
+        showCorrectState = false;
+        answered = false;
+      });
+    } else {
+      latestScore = correctAnswerCount;
+      highScore = max(correctAnswerCount, highScore);
+      average = ((average*numRounds)+latestScore) / ++numRounds;
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setInt('highScore', highScore);
+      prefs.setInt('numRounds', numRounds);
+      prefs.setDouble('average', average);
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Menu(allQuestions: widget.allQuestions),
+        ),
+      );
+    }
   }
 
   void _handleAnswerTap(String answer) async{
@@ -139,9 +257,7 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     final question = widget.triviaList[currentQuestionIndex];
 
-    return MaterialApp(
-      title: 'Trivia Game',
-      home: Scaffold(
+    return Scaffold(
         appBar: AppBar(title: const Text('Trivia Game')),
         body: Stack(
           children: [
@@ -200,7 +316,6 @@ class _MainAppState extends State<MainApp> {
             ),
           ],
         ),
-      ),
     );
   }
 }
