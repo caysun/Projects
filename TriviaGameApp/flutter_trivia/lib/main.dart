@@ -3,6 +3,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:html_unescape/html_unescape.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
@@ -42,10 +44,26 @@ class Question {
   this.correctAnswer, this.combinedAnswers);
 }
 
+String scoreName (double score){
+  if(score >= 18.00){
+    return "Socrates";
+  } else if(score >= 14.00){
+    return "Jennings";
+  } else if(score >= 8.00){
+    return "Joe";
+  } else if(score >= 5.00){
+    return "Beetlejuice";
+  } else if(score >= 0.00){
+    return "Dexter";
+  }
+  return "Dexter";
+}
+
 int latestScore = -1;
 int highScore = -1;
 int numRounds = 0;
 double average = 0.0;
+const Color creamColor = Color.fromARGB(255, 253, 249, 228);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -114,62 +132,109 @@ class _MenuState extends State<Menu> {
   @override
   Widget build(BuildContext context) {
     return  Scaffold(
-      body: Stack(
-        children: [
-
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
+          children: [
           // Latest Score at the top center
           if (latestScore != -1)
             Align(
               alignment: Alignment.topCenter,
               child: Padding(
-                padding: const EdgeInsets.only(top: 60),
+                padding: const EdgeInsets.only(top: 300),
                 child: Text(
-                  'Last Score: ${latestScore}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  'Last Score: ${latestScore}  ${scoreName(latestScore.toDouble())}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: creamColor),
                 ),
               ),
             ),
-          // High Score under last score
-          if (highScore != -1)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 120),
-                child: Text(
-                  'High Score: ${highScore}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          // Latest Score at the top center
-          if (highScore != -1)
-            Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 180),
-                child: Text(
-                  'Average Score: ${average.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          Center(
-            child: ElevatedButton(
-              child: const Text('START NEW PUZZLE', style: TextStyle(fontSize: 20.0)),
-              onPressed: (){
-                widget.allQuestions.shuffle(Random());
-                List<Question> triviaList = widget.allQuestions.take(5).toList();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Game(triviaList: triviaList, allQuestions: widget.allQuestions),
+            // High Score under last score
+            if (highScore != -1)
+              Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 180),
+                  child: Text(
+                    'High Score: ${highScore}  ${scoreName(highScore.toDouble())}',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: creamColor),
                   ),
-                );
-              },
-            )
-          )
-        ]
-      )
+                ),
+              ),
+            // Average Score under High Score
+            if (highScore != -1)
+              Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 240),
+                  child: Text(
+                    'Average Score: ${average.toStringAsFixed(2)}  ${scoreName(average)}',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: creamColor),
+                  ),
+                ),
+              ),
+            Center(
+              child: ElevatedButton(
+                child: const Text('START NEW GAME', style: TextStyle(fontSize: 20.0)),
+                onPressed: (){
+                  widget.allQuestions.shuffle(Random());
+                  List<Question> triviaList = widget.allQuestions.take(20).toList();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Game(triviaList: triviaList, allQuestions: widget.allQuestions),
+                    ),
+                  );
+                },
+              )
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 100.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text("Awards", style: TextStyle(fontSize: 20, color: creamColor)),
+                    SizedBox(height: 8),
+                    Text("Socrates Mastery Award: 18–20", style: TextStyle(fontSize: 17, color: creamColor)),
+                    SizedBox(height: 8),
+                    Text("Ken Jennings Excellence Award: 14–17", style: TextStyle(fontSize: 17, color: creamColor)),
+                    SizedBox(height: 8),
+                    Text("Joe Mediocrity Award: 8–13", style: TextStyle(fontSize: 17, color: creamColor)),
+                    SizedBox(height: 8),
+                    Text("Beetlejuice Try Again Award: 5–7", style: TextStyle(fontSize: 17, color: creamColor)),
+                    SizedBox(height: 8),
+                    Text("Timothy Dexter Original Thinker Award: 0–4", style: TextStyle(fontSize: 17, color: creamColor)),
+                    SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              color: Colors.black,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/chiliPepperVector.svg',
+                    height: 80, // try 80–100 if needed
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Trivia Spice',
+                    style: TextStyle(
+                      fontSize: 35,
+                      fontWeight: FontWeight.bold,
+                      color: Color.fromARGB(255, 137, 16, 16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ]
+        )
+      ),
     );
   }
 }
@@ -246,11 +311,11 @@ class _MainAppState extends State<Game> {
 
   Color _getAnswerColor(String answer){
     if(!answered){
-      return selectedAnswer == answer ? Colors.blue[200]! : Colors.grey[200]!;
+      return selectedAnswer == answer ? Colors.blue[200]! : creamColor;
     }
     if(answer == widget.triviaList[currentQuestionIndex].correctAnswer) return Colors.green[200]!;
     if(answer == selectedAnswer) return Colors.red[200]!;
-    return Colors.grey[200]!;
+    return creamColor;
   }
 
   @override
@@ -258,32 +323,44 @@ class _MainAppState extends State<Game> {
     final question = widget.triviaList[currentQuestionIndex];
 
     return Scaffold(
-        appBar: AppBar(title: const Text('Trivia Game')),
-        body: Stack(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Stack(
           children: [
-          // Score at the top center
+            // Score at the top center
             Positioned(
-              top: 20,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  'Score: $correctAnswerCount / $totalAnswerCount', // your score variable
-                  style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-                ),
-              ),
+                top: 85,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    'Score: $correctAnswerCount / $totalAnswerCount', // your score variable
+                    style: const TextStyle(fontSize: 19.0, fontWeight: FontWeight.bold, color: creamColor),
+                 ),
+               ),
             ),
-
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      unescape.convert(question.triviaQuestion),
-                      style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
+                    SizedBox(
+                      height: 300, // constrain height so scrolling is needed
+                      child: Scrollbar(
+                        thumbVisibility: true,
+                        child: SingleChildScrollView(
+                          child: Text(
+                            unescape.convert(question.triviaQuestion),
+                            style: const TextStyle(
+                              fontSize: 20.0, // starting size
+                              fontWeight: FontWeight.w100,
+                              color: Color.fromARGB(255, 110, 172, 207),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 20),
                     ...question.combinedAnswers.map(
@@ -298,12 +375,12 @@ class _MainAppState extends State<Game> {
                             decoration: BoxDecoration(
                               color: _getAnswerColor(answer),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade400),
+                              border: Border.all(color: creamColor),
                             ),
                             child: Center(
                               child: Text(
                                 unescape.convert(answer),
-                                style: const TextStyle(fontSize: 16),
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -314,8 +391,31 @@ class _MainAppState extends State<Game> {
                 ),
               ),
             ),
+            Container(
+              color: Colors.black,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/chiliPepperVector.svg',
+                    height: 65, // try 80–100 if needed
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Trivia Spice',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Color.fromARGB(255, 137, 16, 16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
+      )
     );
   }
 }

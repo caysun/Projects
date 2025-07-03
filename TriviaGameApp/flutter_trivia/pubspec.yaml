@@ -13,6 +13,8 @@ dependencies:
   audioplayers: ^5.2.1
   http: ^0.13.6
   shared_preferences: ^2.0.15
+  flutter_svg: ^2.0.7
+  auto_size_text: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +27,4 @@ flutter:
     -  assets/trivia_test.json
     -  assets/sounds/correctAnswer.mp3
     -  assets/sounds/incorrectAnswer.mp3
+    -  assets/images/chiliPepperVector.svg
