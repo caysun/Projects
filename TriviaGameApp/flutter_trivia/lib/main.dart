@@ -317,7 +317,7 @@ class _MainAppState extends State<Game> {
     if(answer == selectedAnswer) return Colors.red[200]!;
     return creamColor;
   }
-
+  
   @override
   Widget build(BuildContext context) {
     final question = widget.triviaList[currentQuestionIndex];
@@ -325,97 +325,110 @@ class _MainAppState extends State<Game> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            // Score at the top center
-            Positioned(
-                top: 85,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Text(
-                    'Score: $correctAnswerCount / $totalAnswerCount', // your score variable
-                    style: const TextStyle(fontSize: 19.0, fontWeight: FontWeight.bold, color: creamColor),
-                 ),
-               ),
-            ),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    SizedBox(
-                      height: 300, // constrain height so scrolling is needed
-                      child: Scrollbar(
-                        thumbVisibility: true,
-                        child: SingleChildScrollView(
-                          child: Text(
-                            unescape.convert(question.triviaQuestion),
-                            style: const TextStyle(
-                              fontSize: 20.0, // starting size
-                              fontWeight: FontWeight.w100,
-                              color: Color.fromARGB(255, 110, 172, 207),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    ...question.combinedAnswers.map(
-                      (answer) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6.0),
-                        child: InkWell( 
-                          onTap: () => _handleAnswerTap(answer),
-                          borderRadius: BorderRadius.circular(12),
-                          splashColor: Colors.blueAccent.withOpacity(0.3),
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: _getAnswerColor(answer),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: creamColor),
-                            ),
-                            child: Center(
-                              child: Text(
-                                unescape.convert(answer),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // Header with title and score
             Container(
-              color: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              color: Colors.black,
+              child: Column(
                 children: [
-                  SvgPicture.asset(
-                    'assets/images/chiliPepperVector.svg',
-                    height: 65, // try 80–100 if needed
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/images/chiliPepperVector.svg',
+                        height: 65,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Trivia Spice',
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: Color.fromARGB(255, 137, 16, 16),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Trivia Spice',
-                    style: TextStyle(
-                      fontSize: 30,
+                  const SizedBox(height: 20),
+                  Text(
+                    'Score: $correctAnswerCount / $totalAnswerCount',
+                    style: const TextStyle(
+                      fontSize: 19.0,
                       fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(255, 137, 16, 16),
+                      color: creamColor,
                     ),
                   ),
                 ],
               ),
             ),
+
+            // Scrollable content below fixed header
+            Expanded(
+              child: RawScrollbar(
+                thumbVisibility: true,
+                thumbColor: Colors.white,
+                radius: const Radius.circular(20),
+                thickness: 8, 
+                child: SingleChildScrollView(
+                  primary: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: MediaQuery.of(context).size.height * 0.65,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            unescape.convert(question.triviaQuestion),
+                            style: const TextStyle(
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.w100,
+                              color: Color.fromARGB(255, 110, 172, 207),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20.0),
+                          ...question.combinedAnswers.map(
+                            (answer) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: InkWell(
+                                onTap: () => _handleAnswerTap(answer),
+                                borderRadius: BorderRadius.circular(12),
+                                splashColor: Colors.blueAccent.withOpacity(0.3),
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: _getAnswerColor(answer),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: creamColor),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      unescape.convert(answer),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
           ],
         ),
-      )
+      ),
     );
   }
 }
